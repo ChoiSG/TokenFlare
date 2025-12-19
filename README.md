@@ -15,6 +15,8 @@
 - Built in OpSec: bot and scraper blocking, your campaign wouldn't be burnt in 10 minutes.
 - Fast: get working, production ready infra within minutes.
 
+Companion blog post: [Link](https://labs.jumpsec.com/tokenflare-serverless-AiTM-phishing-in-under-60-seconds/)
+
 ## Prerequisites
 
 - Python 3.7+
@@ -85,7 +87,8 @@ User-Agent: TokenFlare/1.0 For_Authorised_Testing_Only
 
 ## Acknowledgements
 
-Many Thanks to:
+
+any Thanks to:
 - [TE](https://github.com/tdejmp) - for helping, debugging, teaching me a ton and otherwise being an awesome human being.
 - [Dave @Cyb3rC3lt](https://github.com/Cyb3rC3lt/) - for creating our v1 internal prod Worker.
 - [Zolderio](https://github.com/zolderio/) - for creating the prototype PoC Worker that started it all.
