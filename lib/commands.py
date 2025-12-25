@@ -1104,10 +1104,7 @@ worker_name = your-worker-name
                 data = json.loads(response.read().decode())
 
                 if data.get('success'):
-                    print()
-                    print("=" * 82)
                     print(f"[+] Worker '{worker_name}' deleted successfully!")
-                    print("=" * 82)
                     print()
                     return 0
                 else:
