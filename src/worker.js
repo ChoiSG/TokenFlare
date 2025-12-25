@@ -487,13 +487,7 @@ function formatDiscord(message) {
 
   return {
     content: truncated,
-    username: 'TokenFlare',
-    embeds: [{
-      title: '🎣 TokenFlare Alert',
-      description: truncated,
-      color: 0xff6600,  // Orange
-      footer: { text: 'TokenFlare - Authorised Testing Only' }
-    }]
+    username: 'TokenFlare'
   };
 }
 
