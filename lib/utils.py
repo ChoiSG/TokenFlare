@@ -78,7 +78,8 @@ def defang_url(url: Optional[str]) -> Optional[str]:
     """Convert URLs to defanged format for safe display"""
     if not url:
         return url
-    return url.replace('https://', 'hxxps://').replace('http://', 'hxxp://').replace('.', '[.]', 1)
+    return url 
+    #return url.replace('https://', 'hxxps://').replace('http://', 'hxxp://').replace('.', '[.]', 1)
 
 
 def get_wrangler_command() -> Optional[List[str]]:
