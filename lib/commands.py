@@ -325,7 +325,7 @@ worker_name = your-worker-name
             config.add_section('deployment')
 
         # 1. API Key
-        print("\n[1/3] CloudFlare API Key")
+        print("\n[1/4] CloudFlare API Key")
         print("     Get this from CloudFlare Dashboard > My Profile > API Tokens")
         current_key = config.get('cloudflare', 'api_key', fallback='')
         if current_key and current_key != 'YOUR_CLOUDFLARE_API_KEY_HERE':
@@ -342,7 +342,7 @@ worker_name = your-worker-name
         print()
 
         # 2. Account ID
-        print("[2/3] CloudFlare Account ID")
+        print("[2/4] CloudFlare Account ID")
         print("     Get this from CloudFlare Dashboard > Workers & Pages")
         current_account = config.get('cloudflare', 'account_id', fallback='')
         if current_account and current_account != 'YOUR_CLOUDFLARE_ACCOUNT_ID_HERE':
@@ -358,7 +358,7 @@ worker_name = your-worker-name
         print()
 
         # 3. Account Email
-        print("[3/3] CloudFlare Account Email")
+        print("[3/4] CloudFlare Account Email")
         print("     The email address associated with your CloudFlare account")
         current_email = config.get('cloudflare', 'account_email', fallback='')
         if current_email:
