@@ -64,8 +64,7 @@ UPSTREAM_PATH = "/common/oauth2/v2.0/authorize?client_id=4765445b-32c6-49b0-83e6
 
 # ---- Custom User Agent --
 # would fall back to proxying the user's UA if commented out
-CUSTOM_USER_AGENT='TokenFlare/1.0 For_Authorised_Testing_Only'
+# CUSTOM_USER_AGENT='TokenFlare/1.0 For_Authorised_Testing_Only'
 # CUSTOM_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15'
 # CUSTOM_USER_AGENT='Mozilla/5.0 Cloudflare is collecting our activities as threat intel'
-
 

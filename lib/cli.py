@@ -57,6 +57,12 @@ def dispatch_command(app: TokenFlare, args: argparse.Namespace, parser: argparse
             'local': app.commands.cmd_deploy_local,
             'remote': app.commands.cmd_deploy_remote,
         },
+        'infra': {
+            'cf': {
+                'list': app.commands.cmd_infra_cf_list,
+                'remove': lambda: app.commands.cmd_infra_cf_remove(args.worker_name),
+            }
+        },
         'status': lambda: app.commands.cmd_status(get_lure_url=getattr(args, 'get_lure_url', False)),
         'version': app.commands.cmd_version,
     }
@@ -66,7 +72,7 @@ def dispatch_command(app: TokenFlare, args: argparse.Namespace, parser: argparse
     if handler is None:
         return None
 
-    # Handle nested commands (configure, deploy)
+    # Handle nested commands (configure, deploy, infra)
     if isinstance(handler, dict):
         subcommand_attr = f"{args.command}_type"
         subcommand = getattr(args, subcommand_attr, None)
@@ -76,6 +82,16 @@ def dispatch_command(app: TokenFlare, args: argparse.Namespace, parser: argparse
             return ('show_subparser_help', args.command)
 
         handler = handler.get(subcommand)
+
+        # Handle double-nested commands (infra cf list)
+        if isinstance(handler, dict):
+            sub_subcommand_attr = f"{args.command}_{subcommand}_command"
+            sub_subcommand = getattr(args, sub_subcommand_attr, None)
+
+            if sub_subcommand is None:
+                return ('show_subparser_help', args.command)
+
+            handler = handler.get(sub_subcommand)
 
     if handler is None:
         return None
@@ -117,6 +133,15 @@ def create_parser() -> Tuple[argparse.ArgumentParser, Dict[str, argparse.Argumen
     deploy_sub.add_parser('local', help='Deploy locally with wrangler dev')
     deploy_sub.add_parser('remote', help='Deploy to CloudFlare')
 
+    # Infra command
+    parser_infra = subparsers.add_parser('infra', help='Manage TokenFlare infrastructure')
+    infra_sub = parser_infra.add_subparsers(dest='infra_type', help='Infrastructure provider')
+    infra_cf_sub = infra_sub.add_parser('cf', help='CloudFlare infrastructure')
+    infra_cf_commands = infra_cf_sub.add_subparsers(dest='infra_cf_command', help='CloudFlare commands')
+    infra_cf_commands.add_parser('list', help='List all TokenFlare workers')
+    parser_infra_cf_remove = infra_cf_commands.add_parser('remove', help='Remove a TokenFlare worker')
+    parser_infra_cf_remove.add_argument('worker_name', help='Name of the worker to remove')
+
     # Status command
     parser_status = subparsers.add_parser('status', help='Show configuration and deployment status')
     parser_status.add_argument('--get-lure-url', action='store_true',
@@ -128,7 +153,8 @@ def create_parser() -> Tuple[argparse.ArgumentParser, Dict[str, argparse.Argumen
     # Return parser and subparsers for help messages
     subparser_map = {
         'configure': parser_configure,
-        'deploy': parser_deploy
+        'deploy': parser_deploy,
+        'infra': parser_infra
     }
 
     return parser, subparser_map

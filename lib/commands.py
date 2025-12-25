@@ -9,6 +9,7 @@ import sys
 import shutil
 import subprocess
 import configparser
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -748,6 +749,32 @@ worker_name = your-worker-name
                 print("[+] Deployment successful!")
                 print("=" * 82)
 
+                # Tag the worker with "tokenflare" for tracking
+                print("\n[*] Tagging worker with 'tokenflare'...")
+                try:
+                    tag_url = f'https://api.cloudflare.com/client/v4/accounts/{account_id}/workers/scripts/{worker_name}/tags'
+                    tag_data = json.dumps(["tokenflare"]).encode('utf-8')
+                    tag_headers = {
+                        'X-Auth-Email': account_email,
+                        'X-Auth-Key': api_key,
+                        'Content-Type': 'application/json'
+                    }
+
+                    import urllib.request
+                    tag_req = urllib.request.Request(tag_url, data=tag_data, headers=tag_headers, method='PUT')
+                    with urllib.request.urlopen(tag_req, timeout=10) as tag_response:
+                        tag_result = json.loads(tag_response.read().decode())
+                        if tag_result.get('success'):
+                            print("    ✓ Worker tagged successfully")
+                        else:
+                            print("    [!] Failed to tag worker (non-critical)")
+                            if self.app.verbose:
+                                print(f"    Error: {tag_result.get('errors', 'Unknown error')}")
+                except Exception as e:
+                    print(f"    [!] Failed to tag worker: {e} (non-critical)")
+                    if self.app.verbose:
+                        self.logger.exception("Tag error:")
+
                 # Show worker URL
                 if account_subdomain:
                     worker_url = f"https://{worker_name}.{account_subdomain}.workers.dev"
@@ -892,6 +919,213 @@ worker_name = your-worker-name
 
         print()
         return 0
+
+    def cmd_infra_cf_list(self) -> int:
+        """List all CloudFlare workers tagged with 'tokenflare'"""
+        print("TokenFlare Workers on CloudFlare")
+        print("=" * 82)
+        print()
+
+        # 1. Load CloudFlare credentials
+        if not self.config_file.exists():
+            print("[!] CloudFlare not configured")
+            print("    Run: python3 tokenflare.py configure cf")
+            return 1
+
+        cfg = configparser.ConfigParser()
+        cfg.read(self.config_file)
+
+        if not cfg.has_section('cloudflare'):
+            print("[!] CloudFlare credentials missing")
+            return 1
+
+        api_key = cfg.get('cloudflare', 'api_key', fallback='')
+        account_id = cfg.get('cloudflare', 'account_id', fallback='')
+        account_email = cfg.get('cloudflare', 'account_email', fallback='')
+        account_subdomain = cfg.get('cloudflare', 'account_subdomain', fallback='')
+
+        if not api_key or not account_id:
+            print("[!] CloudFlare credentials incomplete")
+            return 1
+
+        # 2. Query CloudFlare API for all workers
+        print("[*] Fetching workers from CloudFlare...")
+        try:
+            import urllib.request
+
+            list_url = f'https://api.cloudflare.com/client/v4/accounts/{account_id}/workers/scripts'
+            headers = {
+                'X-Auth-Email': account_email,
+                'X-Auth-Key': api_key,
+                'Content-Type': 'application/json'
+            }
+
+            req = urllib.request.Request(list_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode())
+
+                if not data.get('success'):
+                    errors = data.get('errors', [])
+                    error_msg = errors[0].get('message', 'Unknown error') if errors else 'Unknown error'
+                    print(f"[!] Failed to fetch workers: {error_msg}")
+                    return 1
+
+                workers = data.get('result', [])
+
+                # 3. Filter workers with 'tokenflare' tag
+                tokenflare_workers = []
+                for worker in workers:
+                    tags = worker.get('tags', []) or []  # Handle None case
+                    if 'tokenflare' in tags:
+                        tokenflare_workers.append(worker)
+
+                # 4. Display results
+                if not tokenflare_workers:
+                    print()
+                    print("[*] No TokenFlare workers found")
+                    print("    Deploy a worker with: python3 tokenflare.py deploy remote")
+                    print()
+                    return 0
+
+                print(f"\n[*] Found {len(tokenflare_workers)} TokenFlare worker(s):")
+                print()
+
+                for worker in tokenflare_workers:
+                    worker_id = worker.get('id', 'Unknown')
+                    created = worker.get('created_on', 'Unknown')
+                    modified = worker.get('modified_on', 'Unknown')
+                    tags = worker.get('tags', [])
+
+                    # Build worker URL
+                    if account_subdomain:
+                        worker_url = f"https://{worker_id}.{account_subdomain}.workers.dev"
+                    else:
+                        worker_url = f"https://{worker_id}.<subdomain>.workers.dev"
+
+                    print(f"  Worker: {worker_id}")
+                    print(f"  URL:    {worker_url}")
+                    print(f"  Tags:   {', '.join(tags)}")
+                    print(f"  Created:  {created[:10] if len(created) > 10 else created}")
+                    print(f"  Modified: {modified[:10] if len(modified) > 10 else modified}")
+                    print()
+
+                return 0
+
+        except urllib.error.HTTPError as e:
+            print(f"[!] HTTP error {e.code}: {e.reason}")
+            if self.app.verbose:
+                self.logger.exception("Full error:")
+            return 1
+        except Exception as e:
+            print(f"[!] Failed to fetch workers: {e}")
+            if self.app.verbose:
+                self.logger.exception("Full error:")
+            return 1
+
+    def cmd_infra_cf_remove(self, worker_name: str) -> int:
+        """Remove a CloudFlare worker (only if tagged with 'tokenflare')"""
+        print(f"Removing Worker: {worker_name}")
+        print("=" * 82)
+        print()
+
+        # 1. Load CloudFlare credentials
+        if not self.config_file.exists():
+            print("[!] CloudFlare not configured")
+            print("    Run: python3 tokenflare.py configure cf")
+            return 1
+
+        cfg = configparser.ConfigParser()
+        cfg.read(self.config_file)
+
+        if not cfg.has_section('cloudflare'):
+            print("[!] CloudFlare credentials missing")
+            return 1
+
+        api_key = cfg.get('cloudflare', 'api_key', fallback='')
+        account_id = cfg.get('cloudflare', 'account_id', fallback='')
+        account_email = cfg.get('cloudflare', 'account_email', fallback='')
+
+        if not api_key or not account_id:
+            print("[!] CloudFlare credentials incomplete")
+            return 1
+
+        # 2. First, check if worker exists and has 'tokenflare' tag
+        print(f"[*] Checking if worker '{worker_name}' is managed by TokenFlare...")
+        try:
+            import urllib.request
+
+            # Get worker settings (which includes tags)
+            get_url = f'https://api.cloudflare.com/client/v4/accounts/{account_id}/workers/scripts/{worker_name}/settings'
+            headers = {
+                'X-Auth-Email': account_email,
+                'X-Auth-Key': api_key,
+                'Content-Type': 'application/json'
+            }
+
+            req = urllib.request.Request(get_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode())
+
+                if not data.get('success'):
+                    print(f"[!] Worker '{worker_name}' not found")
+                    return 1
+
+                worker = data.get('result', {})
+                tags = worker.get('tags', []) or []
+
+                if 'tokenflare' not in tags:
+                    print(f"[!] Worker '{worker_name}' is not managed by TokenFlare")
+                    print(f"    Current tags: {', '.join(tags) if tags else '(none)'}")
+                    print("    Only workers with 'tokenflare' tag can be removed")
+                    return 1
+
+                print(f"    ✓ Worker is managed by TokenFlare")
+                print()
+
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                print(f"[!] Worker '{worker_name}' not found")
+            else:
+                print(f"[!] HTTP error {e.code}: {e.reason}")
+            return 1
+        except Exception as e:
+            print(f"[!] Failed to check worker: {e}")
+            if self.app.verbose:
+                self.logger.exception("Full error:")
+            return 1
+
+        # 3. Delete the worker
+        print(f"[*] Deleting worker '{worker_name}'...")
+        try:
+            delete_url = f'https://api.cloudflare.com/client/v4/accounts/{account_id}/workers/scripts/{worker_name}'
+            delete_req = urllib.request.Request(delete_url, headers=headers, method='DELETE')
+
+            with urllib.request.urlopen(delete_req, timeout=10) as response:
+                data = json.loads(response.read().decode())
+
+                if data.get('success'):
+                    print()
+                    print("=" * 82)
+                    print(f"[+] Worker '{worker_name}' deleted successfully!")
+                    print("=" * 82)
+                    print()
+                    return 0
+                else:
+                    errors = data.get('errors', [])
+                    error_msg = errors[0].get('message', 'Unknown error') if errors else 'Unknown error'
+                    print(f"[!] Failed to delete worker: {error_msg}")
+                    return 1
+
+        except urllib.error.HTTPError as e:
+            print(f"[!] HTTP error {e.code}: {e.reason}")
+            if self.app.verbose:
+                self.logger.exception("Full error:")
+            return 1
+        except Exception as e:
+            print(f"[!] Failed to delete worker: {e}")
+            if self.app.verbose:
+                self.logger.exception("Full error:")
+            return 1
 
     def cmd_version(self) -> int:
         """Display version information"""
